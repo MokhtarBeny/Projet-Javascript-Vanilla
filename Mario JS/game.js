@@ -35,20 +35,20 @@ loadSprite("castle", "castle.png");
 
 const LEVELS = [
   [
+    "              b                  b                                                              ",
     "                                                                                                ",
     "                                                                                                ",
-    "                                                                                                ",
-    "                                                                                                ",
-    "                                                                                                ",
-    "                                                                                                ",
-    "                                                                                                ",
-    "      -?-b-                                                                                     ",
-    "                                                    ?        ?                                  ",
-    "                                                                                                ",
-    "                                      _                 ?                                       ",
-    "                                 _    |                                                         ",
-    "                           _     |    |                _                                        ",
-    "       E                   |     |    |   E   E        |                            H           ",
+    "   -    -  -----  -  -   -  -  -----    -      ------             bbbbb  b     b                ",
+    "   --  --  -   -  - -    -  -    -     - -     -    -             b       b   b                 ",
+    "   - -- -  -   -  --     ----    -    -   -    ------             b        b b                  ",
+    "   -    -  -   -  - -    -  -    -   - --- -   - --               bbbbb     b                   ",
+    "   -    -  -----  -  -   -  -    -  -       -  -   --                                           ",
+    "                                                                                  ?             ",
+    "                                                                bb?                             ",
+    "b                                     _                      _          ?                       ",
+    "                                 _    |                      |                                  ",
+    "                ?-b        _     |    |                _     |                                  ",
+    "       E                   |     |    |   E   E        |     |                        H         ",
     "================     ===========================================================================",
     "================     ===========================================================================",
   ],
@@ -118,7 +118,7 @@ const levelConf = {
     sprite("emptyBox"),
     area(),
     solid(),
-    // bump(),
+    bump(),
     origin("bot"),
     'emptyBox'
   ],
@@ -126,7 +126,7 @@ const levelConf = {
     sprite("coin"),
     area(),
     solid(),
-    //bump(64, 8),
+    bump(64, 8),
     cleanup(),
     lifespan(0.4, { fade: 0.01 }),
     origin("bot"),
@@ -162,7 +162,7 @@ const levelConf = {
     solid(),
     body(),
     patrol(50),
-    //enemy(),
+    enemy(),
     origin("bot"),
     "badGuy"
   ],
@@ -170,12 +170,13 @@ const levelConf = {
     sprite("mario", { frame: 0 }),
     area({ width: 16, height: 16 }),
     body(),
-    //mario(),
-    //bump(150, 20, false),
+    mario(),
+    bump(150, 20, false),
     origin("bot"),
     "player"
   ]
 };
+
 
 scene("start", () => {
 
@@ -186,12 +187,13 @@ scene("start", () => {
     color(255, 255, 255),
   ]);
 
-  onKeyRelease("enter", () => {
+  keyRelease("enter", () => {
     go("game");
   })
 });
 
 go("start");
+
 
 scene("game", (levelNumber = 0) => {
 
@@ -207,6 +209,24 @@ scene("game", (levelNumber = 0) => {
   add([
     sprite("cloud"),
     pos(20, 50),
+    layer("bg")
+  ]);
+
+  add([
+    sprite("cloud"),
+    pos(40, 60),
+    layer("bg")
+  ]);
+
+  add([
+    sprite("cloud"),
+    pos(60, 80),
+    layer("bg")
+  ]);
+
+  add([
+    sprite("cloud"),
+    pos(100, 120),
     layer("bg")
   ]);
 
@@ -235,35 +255,127 @@ scene("game", (levelNumber = 0) => {
 
   const player = level.spawn("p", 1, 10)
 
+  const SPEED = 120;
 
-const SPEED = 120;
+  keyDown("right", () => {
+    if (player.isFrozen) return;
+    player.flipX(false);
+    player.move(SPEED, 0);
+  });
 
-    onKeyDown("right", () => {
-      player.flipX(false);
-      player.move(SPEED, 0);
-    });
+  keyDown("left", () => {
+    if (player.isFrozen) return;
+    player.flipX(true);
+    if (toScreen(player.pos).x > 20) {
+      player.move(-SPEED, 0);
+    }
+  });
 
-    onKeyDown("left", () => {
-      player.flipX(true);
-      if (toScreen(player.pos).x > 20) {
-        player.move(-SPEED, 0);
+  keyPress("space", () => {
+    if (player.isAlive && player.grounded()) {
+      player.jump();
+      canSquash = true;
+    }
+  });
+
+
+  player.action(() => {
+    // center camera to player
+    var currCam = camPos(player.pos);
+    if (currCam.x < player.pos.x) {
+      camPos(player.pos.x, currCam.y);
+    }
+
+    if (player.isAlive && player.grounded()) {
+      canSquash = false;
+    }
+
+    // Check if Mario has fallen off the screen
+    if (player.pos.y > height() - 16){
+      killed();
+    }
+   
+  });
+
+  let canSquash = false;
+
+  player.collides("badGuy", (baddy) => {   
+    if (baddy.isAlive == false) return;
+    if (player.isAlive == false) return;
+    if (canSquash) {
+      // Mario has jumped on the bad guy:
+      baddy.squash();
+    } else {
+      // Mario has been hurt
+      if (player.isBig) {
+        player.smaller();
+      } else {
+        // Mario is dead :(
+        killed();
       }
-    });
+    }
+  });
 
-    onKeyPress("space", () => {
-      if (player.grounded()) {
-        player.jump();
-      }
-    });
-
-  player.onUpdate(() => {
-  // center camera to player
-  var currCam = camPos();
-  if (currCam.x < player.pos.x) {
-    camPos(player.pos.x, currCam.y);
+  function killed() {
+  // Mario is dead :(
+    if (player.isAlive == false) return; // Don't run it if mario is already dead
+    player.die();
+    add([
+      text("Game Over :(", { size: 24 }),
+      pos(toWorld(vec2(160, 120))),
+      color(255, 255, 255),
+      origin("center"),
+      layer('ui'),
+    ]);
+    wait(2, () => {
+      go("start");
+    })
   }
-});
-  
+
+
+  player.on("headbutt", (obj) => {
+    if (obj.is("questionBox")) {
+      if (obj.is("coinBox")) {
+        let coin = level.spawn("c", obj.gridPos.sub(0, 1));
+        coin.bump();
+      } else
+      if (obj.is("mushyBox")) {
+        level.spawn("M", obj.gridPos.sub(0, 1));
+      }
+      var pos = obj.gridPos;
+      destroy(obj);
+      var box = level.spawn("!", pos);
+      box.bump();
+    }
+  });
+
+  player.collides("bigMushy", (mushy) => {
+    destroy(mushy);
+    player.bigger();
+  });
+
+
+  player.collides("castle", (castle, side) => {
+    player.freeze();
+    add([
+      text("Well Done!", { size: 24 }),
+      pos(toWorld(vec2(160, 120))),
+      color(255, 255, 255),
+      origin("center"),
+      layer('ui'),
+    ]);
+    wait(1, () => {
+      let nextLevel = levelNumber + 1;
+
+      if (nextLevel >= LEVELS.length) {
+        go("start");
+      } else {
+        go("game", nextLevel);
+      }
+    })
+  });
+
+
 });
 
 
@@ -288,6 +400,126 @@ function patrol(distance = 100, speed = 50, dir = 1) {
     },
   };
 }
+
+
+function enemy() {
+  return {
+    id: "enemy",
+    require: ["pos", "area", "sprite", "patrol"],
+    isAlive: true,
+    update() {
+
+    },
+    squash() {
+      console.log('squashing');
+      this.isAlive = false;
+      this.unuse("patrol");
+      this.stop();
+      this.frame = 2;
+      this.area.width = 16;
+      this.area.height = 8;
+      this.use(lifespan(0.5, { fade: 0.1 }));
+    }
+  }
+}
+
+
+function bump(offset = 8, speed = 2, stopAtOrigin = true) {
+  return {
+    id: "bump",
+    require: ["pos"],
+    bumpOffset: offset,
+    speed: speed,
+    bumped: false,
+    origPos: 0,
+    direction: -1,
+    update() {
+      if (this.bumped) {
+        this.pos.y = this.pos.y + this.direction * this.speed;
+        if (this.pos.y < this.origPos - this.bumpOffset) {
+          this.direction = 1;
+        }
+        if (stopAtOrigin && this.pos.y >= this.origPos) {
+          this.bumped = false;
+          this.pos.y = this.origPos;
+          this.direction = -1;
+        }
+      }
+    },
+    bump() {
+      this.bumped = true;
+      this.origPos = this.pos.y;
+    }
+  };
+}
+
+
+function mario() {
+    return {
+      id: "mario",
+      require: ["body", "area", "sprite", "bump"],
+      smallAnimation: "Running",
+      bigAnimation: "RunningBig",
+      smallStopFrame: 0,
+      bigStopFrame: 8,
+      smallJumpFrame: 5,
+      bigJumpFrame: 13,
+      isBig: false,
+      isFrozen: false,
+      isAlive: true,
+      update() {
+        if (this.isFrozen) {
+          this.standing();
+          return;
+        }
+
+        if (!this.grounded()) {
+          this.jumping();
+        }
+        else {
+          if (keyIsDown("left") || keyIsDown("right")) {
+            this.running();
+          } else {
+            this.standing();
+          }
+        }
+      },
+      bigger() {
+        this.isBig = true;
+        this.area.width = 24;
+        this.area.height = 32;
+      },
+      smaller() {
+        this.isBig = false;
+        this.area.width = 16;
+        this.area.height = 16;
+      },
+      standing() {
+        this.stop();
+        this.frame = this.isBig ? this.bigStopFrame : this.smallStopFrame;
+      },
+      jumping() {
+        this.stop();
+        this.frame = this.isBig ? this.bigJumpFrame : this.smallJumpFrame;
+      },
+      running() {
+        const animation = this.isBig ? this.bigAnimation : this.smallAnimation;
+        if (this.curAnim() !== animation) {
+          this.play(animation);
+        }
+      },
+      freeze() {
+        this.isFrozen = true;
+      },
+      die() {
+        this.unuse("body");
+        this.bump();
+        this.isAlive = false;
+        this.freeze();
+        this.use(lifespan(1, { fade: 1 }));
+      }
+    }
+  }
 
 
 
