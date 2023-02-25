@@ -1,6 +1,6 @@
-# Bienvenue sur mon Projet Mario Bro en Javascript
+# Bienvenue sur mon Projet MarioBros en Javascript
 
-## Vue de la scene de démarrage
+## Apercu de la scene de démarrage (start)
 
 ![Markdown Logo](https://www.zupimages.net/up/23/08/uwtg.png)
 
