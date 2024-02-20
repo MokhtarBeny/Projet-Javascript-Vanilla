@@ -1,5 +1,5 @@
   
-import kaboom from "https://unpkg.com/kaboom/dist/kaboom.mjs";
+import kaboom from "https://unpkg.com/kaboom@2000.2.9/dist/kaboom.mjs";
 
 
 // initialize kaboom context
